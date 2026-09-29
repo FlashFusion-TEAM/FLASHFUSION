@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLASHFUSION — Multi-Source Intelligence for Hyper-Local Flash-Flood Prediction</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#080c16;
+    --panel:#0f1729;
+    --panel2:#0c1424;
+    --border:#1e293b;
+    --border-soft:#182236;
+    --text:#e6ebf5;
+    --text-dim:#8b98b0;
+    --text-faint:#5b6780;
+    --accent:#3b82f6;
+    --accent-dim:#1d4ed8;
+    --green:#22c55e;
+    --yellow:#eab308;
+    --orange:#f97316;
+    --red:#ef4444;
+    --purple:#a855f7;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh;}
+
+  .sidebar{
+    background:var(--panel2);
+    border-right:1px solid var(--border);
+    padding:20px 14px;
+    display:flex;flex-direction:column;
+    position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:0 6px 22px;}
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(145deg,#3b82f6,#1d4ed8);
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;flex-shrink:0;
+  }
+  .brand .name{font-size:17px;font-weight:700;letter-spacing:.2px;}
+  .brand .sub{font-size:10px;color:var(--text-faint);margin-top:1px;}
+
+  .nav-label{font-size:10.5px;letter-spacing:1px;color:var(--text-faint);padding:14px 10px 8px;font-weight:600;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:9px;margin-bottom:2px;
+    color:var(--text-dim);cursor:pointer;font-size:13.5px;font-weight:500;
+    border:1px solid transparent;
+    transition:background .15s,color .15s;
+  }
+  .nav-item .ic{width:18px;text-align:center;font-size:15px;}
+  .nav-item:hover{background:#141f38;color:var(--text);}
+  .nav-item.active{background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;border-color:#3b82f6;}
+
+  .quick-actions{margin-top:auto;padding-top:14px;}
+  .qa-btn{
+    width:100%;text-align:left;padding:10px 12px;border-radius:9px;margin-bottom:8px;
+    font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--border);
+    background:var(--panel);color:var(--text);display:flex;align-items:center;gap:8px;
+  }
+  .qa-btn.danger{color:var(--red);border-color:#3f1d24;background:#1a0f13;}
+  .qa-btn.danger:hover{background:#241318;}
+  .qa-btn.primary{color:#93c5fd;border-color:#173357;background:#0e1b30;}
+  .qa-btn.primary:hover{background:#132542;}
+
+  .sys-status{
+    margin-top:8px;padding:12px;border-radius:9px;background:var(--panel);
+    border:1px solid var(--border);font-size:11.5px;
+  }
+  .sys-status .row{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--green);margin-bottom:4px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;box-shadow:0 0 6px currentColor;}
+  .sys-status .muted{color:var(--text-faint);}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 26px;border-bottom:1px solid var(--border);
+    background:rgba(15,23,41,.5);position:sticky;top:0;z-index:50;backdrop-filter:blur(6px);
+  }
+  .page-title{font-size:16px;font-weight:700;}
+  .page-sub{font-size:11.5px;color:var(--text-faint);margin-top:1px;}
+  .top-right{display:flex;flex-wrap:wrap;row-gap:8px;align-items:center;gap:12px;font-size:12.5px;color:var(--text-dim);}
+  .chip{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;background:var(--panel);border:1px solid var(--border);}
+  .bell{position:relative;font-size:16px;cursor:pointer;}
+  .bell .badge{
+    position:absolute;top:-6px;right:-8px;background:var(--red);color:#fff;font-size:9.5px;
+    padding:1px 5px;border-radius:8px;font-weight:700;
+  }
+  .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(145deg,#a855f7,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+
+  .content{padding:22px 26px 60px;max-width:1500px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .banner-note{
+    background:#0e1b30;border:1px solid #173357;border-radius:10px;padding:10px 14px;
+    font-size:11.5px;color:var(--text-dim);margin-bottom:16px;line-height:1.5;
+  }
+  .banner-note b{color:#93c5fd;}
+
+  /* ---------- Hero / pipeline ---------- */
+  .hero{margin-bottom:16px;}
+  .hero .htitle{font-size:21px;font-weight:900;letter-spacing:.5px;background:linear-gradient(90deg,#60a5fa,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero .htag{font-size:12.5px;color:var(--text-dim);margin-top:2px;}
+  .pipeline{display:flex;align-items:center;gap:0;margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;overflow-x:auto;}
+  .pstep{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:92px;position:relative;}
+  .pstep .pcircle{
+    width:42px;height:42px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-size:18px;
+    animation:pflow 6s ease-in-out infinite;
+  }
+  .pstep:nth-child(1) .pcircle{animation-delay:0s;}
+  .pstep:nth-child(3) .pcircle{animation-delay:1.2s;}
+  .pstep:nth-child(5) .pcircle{animation-delay:2.4s;}
+  .pstep:nth-child(7) .pcircle{animation-delay:3.6s;}
+  .pstep:nth-child(9) .pcircle{animation-delay:4.8s;}
+  @keyframes pflow{
+    0%,80%,100%{border-color:var(--border);box-shadow:none;}
+    10%,25%{border-color:#3b82f6;box-shadow:0 0 14px #3b82f688;}
+  }
+  .pstep .plabel{font-size:10.5px;font-weight:800;letter-spacing:.5px;color:var(--text-dim);}
+  .pstep .psub{font-size:9.5px;color:var(--text-faint);text-align:center;line-height:1.3;}
+  .parrow{color:var(--text-faint);font-size:16px;padding:0 6px;flex-shrink:0;margin-bottom:22px;}
+  #alertPipeStep.flash .pcircle{border-color:#f43f5e !important;box-shadow:0 0 18px #f43f5eaa !important;background:#3a0d18 !important;}
+
+  /* ---------- Signature escalation panel ---------- */
+  .escalation-panel{
+    border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;border:1px solid var(--border);
+    background:var(--panel);
+  }
+  .escalation-panel.esc-idle{border-color:var(--border);}
+  .escalation-panel.esc-critical{border-color:#f43f5e;background:linear-gradient(135deg,#2a0a12,#150a1e);box-shadow:0 0 26px #f43f5e33;animation:escPulse 2.2s infinite;}
+  .escalation-panel.esc-high{border-color:var(--orange);background:linear-gradient(135deg,#241206,#150a1e);box-shadow:0 0 20px #f9731633;}
+  .escalation-panel.esc-moderate{border-color:var(--yellow);background:linear-gradient(135deg,#221c05,#13100a);}
+  .escalation-panel.esc-low{border-color:var(--green);}
+  @keyframes escPulse{
+    0%{box-shadow:0 0 12px #f43f5e33;}
+    50%{box-shadow:0 0 30px #f43f5e66;}
+    100%{box-shadow:0 0 12px #f43f5e33;}
+  }
+  .esc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .esc-title{font-size:15px;font-weight:900;letter-spacing:.4px;}
+  .esc-score{font-size:30px;font-weight:900;display:flex;align-items:baseline;gap:10px;margin-bottom:12px;}
+  .esc-arrow{font-size:22px;}
+  .esc-status{font-size:13px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;}
+  .esc-label{font-size:11px;font-weight:800;color:var(--text-faint);letter-spacing:.5px;margin-bottom:8px;}
+  .esc-factors{display:flex;flex-wrap:wrap;gap:10px;}
+  .esc-factors span{background:var(--panel2);border:1px solid var(--border-soft);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;}
+  .esc-window{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-soft);font-size:13.5px;font-weight:700;}
+  .esc-window b{color:#fca5b1;font-size:15px;}
+  .esc-window.muted{color:var(--text-faint);font-weight:500;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+  .stat-card .label{font-size:11.5px;color:var(--text-dim);font-weight:600;display:flex;justify-content:space-between;align-items:center;}
+  .stat-card .value{font-size:28px;font-weight:800;margin-top:6px;}
+  .stat-card .value small{font-size:12px;color:var(--text-faint);font-weight:500;}
+  .swatch{width:9px;height:9px;border-radius:50%;}
+
+  .grid-main{display:grid;grid-template-columns:2.2fr 1fr;gap:16px;align-items:start;}
+  .grid-bottom{display:grid;grid-template-columns:1.4fr 1.1fr 1fr;gap:16px;margin-top:16px;}
+
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .panel-head h3{margin:0;font-size:14px;font-weight:700;}
+  .panel-head .hint{font-size:11px;color:var(--text-faint);}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;font-size:12.5px;
+    font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);
+  }
+  .btn:hover{filter:brightness(1.15);}
+  .btn.pulse{
+    background:linear-gradient(90deg,#dc2626,#b91c1c);border-color:#7f1d1d;color:#fff;
+    box-shadow:0 0 0 0 rgba(220,38,38,.6);animation:pulseGlow 2s infinite;
+  }
+  @keyframes pulseGlow{
+    0%{box-shadow:0 0 0 0 rgba(220,38,38,.45);}
+    70%{box-shadow:0 0 0 10px rgba(220,38,38,0);}
+    100%{box-shadow:0 0 0 0 rgba(220,38,38,0);}
+  }
+  .btn:disabled{opacity:.5;cursor:not-allowed;animation:none;}
+
+  #map{height:420px;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+
+  .legend{
+    position:absolute;z-index:800;background:rgba(10,15,26,.92);border:1px solid var(--border);
+    border-radius:9px;padding:10px 12px;font-size:11.5px;bottom:14px;right:14px;color:var(--text-dim);
+  }
+  .legend div{display:flex;align-items:center;gap:7px;margin:3px 0;}
+
+  /* ---------- river flow + locality boundary styling ---------- */
+  .river-flow-main{ stroke-dasharray:10 14; animation: riverDash 1.1s linear infinite; }
+  .river-flow-mini{ stroke-dasharray:8 12; animation: riverDash 1.1s linear infinite; }
+  @keyframes riverDash{ to { stroke-dashoffset:-24; } }
+  .river-arrow-icon{
+    font-size:15px; line-height:1; color:#bae6fd; text-shadow:0 0 5px #0369a1, 0 0 2px #000;
+    filter:drop-shadow(0 0 2px #000);
+  }
+  .river-label-badge{
+    background:rgba(14,27,48,.92); border:1px solid #173357; color:#7dd3fc; font-size:10.5px;
+    font-weight:800; padding:3px 10px; border-radius:12px; white-space:nowrap; letter-spacing:.2px;
+  }
+  .leaflet-tooltip.loc-boundary-label{
+    background:rgba(10,15,26,.9); border:1px solid var(--border); color:var(--text);
+    font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; box-shadow:none;
+  }
+  .leaflet-tooltip.loc-boundary-label::before{ display:none; }
+
+  /* ---------- news-broadcast style flood map ---------- */
+  .view-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .vtbtn{
+    background:var(--panel2);color:var(--text-dim);border:none;padding:6px 12px;font-size:11.5px;
+    font-weight:700;cursor:pointer;
+  }
+  .vtbtn.active{background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;}
+  .broadcast-card{
+    background:#060a14;border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  }
+  .bcast-topbar{
+    display:flex;align-items:center;gap:12px;padding:9px 14px;
+    background:linear-gradient(90deg,#1a0a0f,#0d1424);border-bottom:2px solid #7f1d1d;
+  }
+  .bcast-live{display:flex;align-items:center;gap:6px;color:#fff;background:#dc2626;font-size:11px;font-weight:900;padding:3px 9px;border-radius:4px;letter-spacing:.5px;}
+  .bcast-dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:bcastBlink 1s step-start infinite;}
+  @keyframes bcastBlink{ 50%{ opacity:0; } }
+  .bcast-heading{flex:1;color:#fff;font-weight:900;font-size:14px;letter-spacing:.4px;text-transform:uppercase;}
+  .bcast-clock{color:#fca5b1;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .broadcast-svg{width:100%;height:auto;display:block;}
+  .bcast-river-flow{ stroke-dasharray:10 12; animation: riverDash 1.1s linear infinite; }
+  .bcast-alert-ring{ transform-box:fill-box; transform-origin:center; animation: bcastRing 1.6s ease-out infinite; }
+  @keyframes bcastRing{ 0%{ transform:scale(1); opacity:.7; } 100%{ transform:scale(2.6); opacity:0; } }
+  .bcast-ticker{
+    background:#0d1424;border-top:1px solid var(--border);overflow:hidden;white-space:nowrap;padding:7px 0;
+  }
+  .bcast-ticker-track{
+    display:inline-block;padding-left:100%;font-size:12px;font-weight:700;color:#fca5b1;
+    animation:bcastMarquee 22s linear infinite;
+  }
+  @keyframes bcastMarquee{ 0%{ transform:translateX(0); } 100%{ transform:translateX(-100%); } }
+
+  .badge-risk{padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:800;letter-spacing:.3px;}
+  .risk-low{background:#0f2e1c;color:var(--green);}
+  .risk-moderate{background:#3a2c05;color:var(--yellow);}
+  .risk-high{background:#3d1a05;color:var(--orange);}
+  .risk-critical{background:#3a0d18;color:#fca5b1;}
+
+  .detail-panel .vname{font-size:17px;font-weight:800;}
+  .detail-panel .vloc{font-size:11.5px;color:var(--text-faint);margin:2px 0 12px;}
+  .risk-banner{border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--border-soft);}
+  .risk-banner .big{font-size:22px;font-weight:900;letter-spacing:.5px;}
+  .risk-banner .sub{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
+  .risk-banner .impact{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-dim);margin-top:8px;}
+
+  .factor-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;}
+  .factor-row:last-child{border-bottom:none;}
+  .factor-row .fname{color:var(--text-dim);display:flex;align-items:center;gap:7px;}
+  .factor-row .fval{font-weight:700;}
+  .factor-row .ftag{font-size:10.5px;color:var(--text-faint);margin-left:6px;}
+
+  .alert-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-soft);font-size:12px;}
+  .alert-item:last-child{border-bottom:none;}
+  .alert-ic{font-size:14px;flex-shrink:0;margin-top:1px;}
+  .alert-item .t1{font-weight:700;}
+  .alert-item .t2{color:var(--text-faint);font-size:11px;}
+  .alert-time{margin-left:auto;color:var(--text-faint);font-size:10.5px;white-space:nowrap;}
+
+  .weather-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center;}
+  .weather-strip .wcol{padding:8px 4px;border-radius:8px;background:var(--panel2);}
+  .weather-strip .wcol .hr{font-size:10.5px;color:var(--text-faint);}
+  .weather-strip .wcol .ic{font-size:16px;margin:4px 0;}
+  .weather-strip .wcol .tm{font-size:12px;font-weight:700;}
+
+  .village-list .vrow{
+    display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;
+    border:1px solid transparent;
+  }
+  .village-list .vrow:hover{background:var(--panel2);}
+  .village-list .vrow.sel{background:#132542;border-color:#1d4ed8;}
+  .village-list .vname{font-weight:600;flex:1;}
+  .village-list .vscore{font-size:11px;color:var(--text-faint);}
+
+  .sensor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .sensor-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .sensor-card .shead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .sensor-card .sname{font-size:12.5px;font-weight:700;color:var(--text-dim);}
+  .online{color:var(--green);font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px;}
+  .sensor-card .sval{font-size:26px;font-weight:800;margin:6px 0 2px;}
+  .sensor-card .slabel{font-size:11px;color:var(--text-faint);}
+  .sensor-card .speak{font-size:10.5px;color:var(--text-faint);margin-top:4px;}
+  .spark{height:34px;margin-top:8px;}
+
+  select, .selectlike{
+    background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;
+    padding:7px 10px;font-size:12.5px;font-weight:600;
+  }
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;color:var(--text-faint);font-weight:600;font-size:11px;padding:8px 10px;border-bottom:1px solid var(--border);}
+  td{padding:9px 10px;border-bottom:1px solid var(--border-soft);}
+  tr:last-child td{border-bottom:none;}
+  .sim-bar-track{width:90px;height:6px;border-radius:3px;background:var(--panel2);overflow:hidden;display:inline-block;vertical-align:middle;}
+  .sim-bar-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#a855f7);}
+
+  .flex{display:flex;}
+  .gap8{gap:8px;}
+  .mt10{margin-top:10px;}
+  .mt16{margin-top:16px;}
+  .muted{color:var(--text-faint);}
+  .small{font-size:11px;}
+  .center{text-align:center;}
+  .empty{padding:30px;text-align:center;color:var(--text-faint);font-size:12.5px;}
+  .src{font-size:10px;color:var(--text-faint);font-style:italic;}
+  .api-status{font-size:10px;font-weight:800;color:var(--text-faint);padding:4px 7px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);}
+  .api-status.live{color:var(--green);border-color:#14532d;background:#0b2115;}
+  .api-status.demo{color:var(--yellow);border-color:#574a12;background:#211d08;}
+  .api-modal{position:fixed;inset:0;z-index:5000;background:rgba(2,6,23,.78);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:20px;}
+  .api-modal.open{display:flex;}
+  .api-box{width:min(520px,100%);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:0 20px 60px #0008;}
+  .api-box h3{margin:0 0 6px;font-size:16px;}
+  .api-box p{color:var(--text-dim);font-size:11.5px;line-height:1.55;margin:0 0 14px;}
+  .api-field{margin:10px 0;}
+  .api-field label{display:block;font-size:11px;color:var(--text-faint);font-weight:700;margin-bottom:5px;}
+  .api-field input{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;outline:none;}
+  .api-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
+  .api-note{font-size:10px;color:var(--text-faint);margin-top:10px;}
+
+
+  @media(max-width:1100px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    .grid-main{grid-template-columns:1fr;}
+    .grid-bottom{grid-template-columns:1fr;}
+    .sensor-grid{grid-template-columns:1fr;}
+    .app{grid-template-columns:1fr;}
+    .sidebar{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="sidebar">
+    <div class="brand">
+      <div class="mark">🌊</div>
+      <div>
+        <div class="name">FLASHFUSION</div>
+        <div class="sub">Multi-Source Flood Intelligence</div>
+      </div>
+    </div>
+
+    <div class="nav-label">MONITOR</div>
+    <div class="nav-item active" data-view="dashboard"><span class="ic">🏠</span>Dashboard</div>
+    <div class="nav-item" data-view="map"><span class="ic">🗺️</span>Risk Map</div>
+    <div class="nav-item" data-view="sensors"><span class="ic">📡</span>Sensor Monitor</div>
+    <div class="nav-item" data-view="prediction"><span class="ic">🤖</span>Prediction &amp; History</div>
+    <div class="nav-item" data-view="alerts"><span class="ic">🚨</span>Alerts</div>
+
+    <div class="nav-label">DATA</div>
+    <div class="nav-item" data-view="historical"><span class="ic">📚</span>Historical Events</div>
+
+    <div class="quick-actions">
+      <div class="qa-btn danger" id="btnSimulate">▶️&nbsp; Simulate Budameru Breach</div>
+      <div class="qa-btn primary" id="btnReset">↺&nbsp; Reset Simulation</div>
+      <div class="qa-btn primary" id="btnApiKeys">🔑&nbsp; Configure API Keys</div>
+      <div class="sys-status">
+        <div class="row"><span class="dot"></span> Live feed running</div>
+        <div class="muted" id="lastUpdated">Last updated just now</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="min-width:0;">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div class="page-sub" id="pageSub">Vijayawada, NTR District, Andhra Pradesh — Budameru rivulet basin, 9 monitored localities</div>
+      </div>
+      <div class="top-right">
+        <div class="chip">🏛️
+          <select id="stateSelect" style="border:none;background:transparent;color:#fff;font-weight:700;padding:0 0 0 4px;"></select>
+        </div>
+        <div class="chip">🌊
+          <select id="districtSelect" style="border:none;background:transparent;color:#fff;font-weight:700;padding:0 0 0 4px;max-width:280px;"></select>
+        </div>
+        <div class="chip">📍
+          <select id="globalVillageSelect" style="border:none;background:transparent;color:#fff;font-weight:700;padding:0 0 0 4px;"></select>
+        </div>
+        <div class="chip" id="clockChip">--:--</div>
+        <div class="api-status demo" id="apiStatus">API: DEMO</div>
+        <div class="bell">🔔<span class="badge" id="alertCount">0</span></div>
+        <div class="avatar">FG</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="hero">
+        <div class="htitle">FLASHFUSION</div>
+        <div class="htag" id="heroTag">Multi-Source Intelligence for Hyper-Local Flash-Flood Prediction</div>
+        <div class="pipeline">
+          <div class="pstep"><div class="pcircle">📡</div><div class="plabel">SENSE</div><div class="psub">Rainfall, soil &amp; water sensors</div></div>
+          <div class="parrow">→</div>
+          <div class="pstep"><div class="pcircle">🧬</div><div class="plabel">FUSE</div><div class="psub">Combine live + historical data</div></div>
+          <div class="parrow">→</div>
+          <div class="pstep"><div class="pcircle">🤖</div><div class="plabel">PREDICT</div><div class="psub">Weighted risk score</div></div>
+          <div class="parrow">→</div>
+          <div class="pstep"><div class="pcircle">📍</div><div class="plabel">LOCALIZE</div><div class="psub">Per-locality risk map</div></div>
+          <div class="parrow">→</div>
+          <div class="pstep" id="alertPipeStep"><div class="pcircle">🚨</div><div class="plabel">ALERT</div><div class="psub">Lead-time &amp; escalation</div></div>
+        </div>
+      </div>
+
+      <div class="banner-note" id="regionBanner"></div>
+
+      <!-- ---------------- DASHBOARD ---------------- -->
+      <div class="view active" id="view-dashboard">
+        <div id="escalationPanelDash"></div>
+        <div class="stat-grid" id="statGrid"></div>
+
+        <div class="grid-main">
+          <div class="card">
+            <div class="panel-head">
+              <h3 id="mapTitleDash">🗺️ Risk Map</h3>
+              <span class="hint">Click a locality to inspect it</span>
+            </div>
+            <div class="broadcast-card">
+              <div id="dashBroadcastContainer"></div>
+              <div class="bcast-ticker">
+                <div class="bcast-ticker-track" id="dashTickerTrack">Loading alerts…</div>
+              </div>
+            </div>
+            <div class="mt16">
+              <div class="panel-head"><h3>📈 Risk Trend — <span id="trendVillageName">Singh Nagar</span></h3></div>
+              <canvas id="trendChart" height="90"></canvas>
+            </div>
+            <div class="mt16">
+              <div class="panel-head"><h3>📊 Risk Score by Locality</h3></div>
+              <canvas id="barChart" height="110"></canvas>
+            </div>
+          </div>
+
+          <div class="card detail-panel" id="detailPanel"></div>
+        </div>
+
+        <div class="grid-bottom">
+          <div class="card">
+            <div class="panel-head"><h3>🚨 Recent Alerts</h3><span class="hint" data-view-link="alerts" style="cursor:pointer;">View all →</span></div>
+            <div id="recentAlerts"></div>
+          </div>
+          <div class="card">
+            <div class="panel-head"><h3>⛅ Upcoming Weather</h3></div>
+            <div class="weather-strip" id="weatherStrip"></div>
+            <div class="mt10 small muted" id="weatherNote"></div>
+          </div>
+          <div class="card">
+            <div class="panel-head"><h3>📍 All Localities</h3></div>
+            <div class="village-list" id="villageListDash"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- RISK MAP ---------------- -->
+      <div class="view" id="view-map">
+        <div class="grid-main">
+          <div class="card">
+            <div class="panel-head">
+              <h3 id="mapTitleFull">🗺️ Regional Risk Map</h3>
+              <div class="flex gap8" style="align-items:center;">
+                <span class="hint" id="mapHintFull">Localities along the basin</span>
+                <div class="view-toggle">
+                  <button class="vtbtn" data-mapview="broadcast" type="button">📺 Broadcast</button>
+                  <button class="vtbtn active" data-mapview="gis" type="button">🛰️ Realistic GIS</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="broadcastWrap" style="display:none">
+              <div class="broadcast-card">
+                <div class="bcast-topbar">
+                  <span class="bcast-live"><span class="bcast-dot"></span> LIVE</span>
+                  <span class="bcast-heading" id="bcastHeading">FLOOD WATCH</span>
+                  <span class="bcast-clock" id="bcastClock">--:--</span>
+                </div>
+                <div id="broadcastMapContainer"></div>
+                <div class="bcast-ticker">
+                  <div class="bcast-ticker-track" id="bcastTickerTrack">Loading alerts…</div>
+                </div>
+              </div>
+            </div>
+
+            <div id="gisWrap" style="position:relative;">
+              <div id="map"></div>
+              <div class="legend">
+                <div><span class="dot" style="color:var(--green)"></span> Low</div>
+                <div><span class="dot" style="color:var(--yellow)"></span> Moderate</div>
+                <div><span class="dot" style="color:var(--orange)"></span> High</div>
+                <div><span class="dot" style="color:#f43f5e"></span> Critical</div>
+                <div id="legendRiverLabel">— river / rivulet (approx. course, flow direction ➤)</div>
+                <div class="small muted" style="margin-top:4px;">Circles = approx. locality monitoring zone</div>
+              </div>
+            </div>
+          </div>
+          <div class="card detail-panel" id="detailPanel2"></div>
+        </div>
+      </div>
+
+      <!-- ---------------- SENSORS ---------------- -->
+      <div class="view" id="view-sensors">
+        <div class="panel-head">
+          <h3 style="font-size:15px;">📡 Sensor Monitor</h3>
+          <select id="sensorVillageSelect"></select>
+        </div>
+        <div class="sensor-grid" id="sensorGrid"></div>
+      </div>
+
+      <!-- ---------------- PREDICTION ---------------- -->
+      <div class="view" id="view-prediction">
+        <div class="panel-head">
+          <h3 style="font-size:15px;">🤖 Prediction &amp; Historical Comparison</h3>
+          <select id="predVillageSelect"></select>
+        </div>
+        <div id="escalationPanelPred"></div>
+        <div class="grid-main">
+          <div class="card">
+            <div class="panel-head"><h3>📈 Risk Progression</h3><span class="hint" id="predHint"></span></div>
+            <canvas id="predChart" height="110"></canvas>
+            <div class="mt16">
+              <div class="panel-head"><h3>Why this score?</h3></div>
+              <div id="predFactors"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="panel-head"><h3>📚 Match Against Historical Events</h3></div>
+            <div class="small muted" style="margin-bottom:10px;">
+              FLASHFUSION compares live rainfall / soil / water-level readings against
+              documented Budameru flood events for this locality to estimate pattern similarity.
+            </div>
+            <div id="historyMatch"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- ALERTS ---------------- -->
+      <div class="view" id="view-alerts">
+        <div class="panel-head"><h3 style="font-size:15px;">🚨 Alert Log</h3><span class="hint" id="alertsHint"></span></div>
+        <div class="card" id="alertsFull"></div>
+      </div>
+
+      <!-- ---------------- HISTORICAL EVENTS ---------------- -->
+      <div class="view" id="view-historical">
+        <div class="panel-head"><h3 style="font-size:15px;">📚 Historical Flood Events — Budameru Basin Archive</h3></div>
+        <div class="card">
+          <table>
+            <thead><tr>
+              <th>Locality</th><th>Date</th><th>Rainfall</th><th>Soil Moisture*</th><th>Water Level*</th>
+              <th>Reported outcome</th><th>Similarity to current conditions</th>
+            </tr></thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+          <div class="src mt10" id="historicalFootnote"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   FLASHFUSION — MULTI-BASIN PROTOTYPE
+   City -> District -> Basin -> Localities. Two basins (Vijayawada/Budameru
+   and Amaravati/Kondaveeti Vagu) are grounded in real reported flood events;
+   a third (hill catchment) is an explicitly-labelled illustrative sample.
+   Live rainfall/soil/water readings are SIMULATED for every basin — replace
+   with real IMD rainfall data, river-gauge telemetry and IoT sensors when
+   moving past prototype stage.
+   ========================================================================= */
+
+const TERRAIN = { Low: 20, Moderate: 45, High: 70, "Very High": 90 };
+
+const regions = [
+  {
+    id:'VJA', city:'Vijayawada', district:'NTR District', state:'Andhra Pradesh',
+    basin:'Budameru Rivulet Basin', riverName:'Budameru rivulet',
+    center:[16.535, 80.612], zoom:12.5, flagship:'SN', boundaryRadius:900, simLabel:'Simulate Budameru Breach',
+    sourceNote:'Locality names, historical flood dates and impact summaries for this basin are drawn from real reported events (1964, 2005 and the Aug-Sep 2024 Budameru breach at Singh Nagar). Live rainfall / soil / water-level readings are simulated for this prototype.',
+    footnote:'*Dates and outcomes reflect real reported Budameru flood events (1964, 2005, 2024). Soil-moisture and water-level figures are estimated for this prototype since sensor archives were not yet in place during those events.',
+    riverPath:[[16.605,80.548],[16.585,80.565],[16.560,80.590],[16.548,80.605],[16.545,80.615],[16.535,80.618],[16.520,80.625],[16.498,80.648]],
+    simStages:[{rainfall:80,soil:60,water:1.2},{rainfall:170,soil:78,water:1.9},{rainfall:280,soil:90,water:2.6},{rainfall:370,soil:96,water:3.4}],
+    localities:[
+      { id:'SN', name:'Singh Nagar', lat:16.545, lng:80.615, terrain:'Very High',
+        rainfall:118, soil:83, water:2.1, forecastHeavy:true,
+        events:[
+          {date:'1 Sep 2024', rainfall:370, soil:96, water:3.4, outcome:"Budameru rivulet breached its bund right at Singh Nagar, its entry point into the city, triggering the worst flood in the area's recent history and displacing roughly two lakh residents citywide."},
+          {date:'Sept 2005', rainfall:210, soil:87, water:2.5, outcome:'Heavy rains pushed Budameru over its banks, submerging large parts of Vijayawada and forcing postponement of municipal elections.'}
+        ]},
+      { id:'ASN', name:'Ajith Singh Nagar', lat:16.540, lng:80.610, terrain:'Very High',
+        rainfall:104, soil:79, water:1.85, forecastHeavy:true,
+        events:[
+          {date:'29 Sep 1964', rainfall:180, soil:80, water:2.0, outcome:'Budameru floodwaters swept through the locality; over ten lives were lost and nearby railway lines were damaged.'},
+          {date:'1 Sep 2024', rainfall:365, soil:95, water:3.2, outcome:'Inundated alongside Singh Nagar during the 2024 Budameru breach.'}
+        ]},
+      { id:'JC', name:'Jakkampudi Colony', lat:16.555, lng:80.600, terrain:'High',
+        rainfall:88, soil:70, water:1.5, forecastHeavy:true,
+        events:[{date:'1 Sep 2024', rainfall:340, soil:93, water:2.7, outcome:'Colony remained submerged for several days; residents were evacuated by boat.'}]},
+      { id:'PP', name:'Payakapuram', lat:16.535, lng:80.618, terrain:'High',
+        rainfall:74, soil:63, water:1.2, forecastHeavy:false,
+        events:[{date:'1 Sep 2024', rainfall:300, soil:90, water:2.3, outcome:'Flooded when the Budameru diversion canal was overwhelmed and overflowed into the colony.'}]},
+      { id:'NN', name:'Nandamuri Nagar', lat:16.548, lng:80.605, terrain:'High',
+        rainfall:69, soil:60, water:1.1, forecastHeavy:false,
+        events:[{date:'1 Sep 2024', rainfall:310, soil:90, water:2.4, outcome:'Low-lying colony built on the Budameru floodplain; flooded once canal capacity was exceeded.'}]},
+      { id:'RRP', name:'New Rajarajeswaripet', lat:16.532, lng:80.612, terrain:'Very High',
+        rainfall:96, soil:75, water:1.7, forecastHeavy:true,
+        events:[{date:'1 Sep 2024', rainfall:320, soil:91, water:2.6, outcome:'One of the worst-hit colonies in 2024; the area sits directly on the Budameru floodplain.'}]},
+      { id:'BP', name:'Bhavani Puram', lat:16.528, lng:80.620, terrain:'Moderate',
+        rainfall:52, soil:52, water:0.9, forecastHeavy:false,
+        events:[{date:'1 Sep 2024', rainfall:250, soil:85, water:1.9, outcome:'Flooded by backflow after Budameru could not drain into an already-swollen Krishna river.'}]},
+      { id:'GP', name:'Gollapudi', lat:16.520, lng:80.595, terrain:'Moderate',
+        rainfall:38, soil:42, water:0.6, forecastHeavy:false,
+        events:[{date:'1 Sep 2024', rainfall:190, soil:74, water:1.3, outcome:'Waterlogging reported; comparatively minor relative to colonies closer to the Budameru bund.'}]},
+      { id:'VP', name:'Vidyadhara Puram', lat:16.515, lng:80.630, terrain:'Low',
+        rainfall:26, soil:33, water:0.4, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'AMV', city:'Amaravati', district:'Guntur District', state:'Andhra Pradesh',
+    basin:'Kondaveeti Vagu Basin', riverName:'Kondaveeti Vagu',
+    center:[16.503, 80.410], zoom:12, flagship:'UDR', boundaryRadius:1000, simLabel:'Simulate Kondaveeti Vagu Overflow',
+    sourceNote:'Locality names and historical flood dates for this basin reflect real reported Kondaveeti Vagu flooding of the Amaravati capital region (2020 district-wide floods, 2024 monsoon, and 13 Aug 2025). Exact soil-moisture and water-level figures are estimated for this prototype; live readings are simulated.',
+    footnote:'*Dates and outcomes reflect real reported Kondaveeti Vagu flood events affecting the Amaravati capital region. Soil-moisture and water-level figures are estimated for this prototype.',
+    riverPath:[[16.300,80.220],[16.380,80.280],[16.450,80.350],[16.503,80.410],[16.515,80.470],[16.510,80.520]],
+    simStages:[{rainfall:70,soil:60,water:1.0},{rainfall:130,soil:75,water:1.5},{rainfall:180,soil:85,water:2.0},{rainfall:230,soil:92,water:2.6}],
+    localities:[
+      { id:'UDR', name:'Uddandarayunipalem', lat:16.513, lng:80.436, terrain:'Very High',
+        rainfall:96, soil:78, water:1.6, forecastHeavy:true,
+        events:[
+          {date:'13 Aug 2025', rainfall:230, soil:92, water:2.6, outcome:'Kondaveeti Vagu overflowed after heavy overnight rain, submerging sites earmarked for the new High Court and GAD buildings, the second such inundation of the capital region within a year.'},
+          {date:'2024 monsoon', rainfall:200, soil:88, water:2.3, outcome:'Kondaveeti Vagu flooding submerged large parts of the Amaravati capital region.'}
+        ]},
+      { id:'RYP', name:'Rayapudi', lat:16.500, lng:80.430, terrain:'High',
+        rainfall:84, soil:71, water:1.35, forecastHeavy:true,
+        events:[{date:'13 Aug 2025', rainfall:210, soil:88, water:2.2, outcome:'Backflow from the swollen vagu flooded farmland and approach roads.'}]},
+      { id:'VKP', name:'Venkatapalem', lat:16.520, lng:80.450, terrain:'High',
+        rainfall:72, soil:65, water:1.15, forecastHeavy:false,
+        events:[{date:'13 Aug 2025', rainfall:190, soil:83, water:1.9, outcome:'Waterlogging from Kondaveeti Vagu overflow affected the village and nearby fields.'}]},
+      { id:'NLP', name:'Nelapadu', lat:16.490, lng:80.410, terrain:'Moderate',
+        rainfall:56, soil:55, water:0.85, forecastHeavy:false,
+        events:[{date:'Sept 2020', rainfall:150, soil:75, water:1.4, outcome:'Road links between Vijayawada and Amaravati were cut as local streams and the Krishna river both rose.'}]},
+      { id:'BRP', name:'Borupalem', lat:16.470, lng:80.400, terrain:'Moderate',
+        rainfall:34, soil:40, water:0.55, forecastHeavy:false, events:[] },
+      { id:'LGP', name:'Lingayapalem', lat:16.460, lng:80.440, terrain:'Low',
+        rainfall:22, soil:30, water:0.35, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'RDP', city:'Kedarnath Valley', district:'Rudraprayag District', state:'Uttarakhand',
+    basin:'Mandakini River Basin', riverName:'Mandakini river',
+    center:[30.62, 79.00], zoom:11, flagship:'KDN', boundaryRadius:450, simLabel:'Simulate Mandakini Cloudburst',
+    sourceNote:'Locality names and the June 2013 event described for this basin are drawn from real reporting on the Kedarnath disaster. Precise soil-moisture and water-level figures are estimated for this prototype; live readings are simulated.',
+    footnote:'*The June 2013 date and general description reflect real reported events in the Mandakini valley. Soil-moisture and water-level figures are estimated for this prototype.',
+    riverPath:[[30.7346,79.0669],[30.6875,79.0206],[30.6699,78.9491],[30.5333,79.0833],[30.284,78.981]],
+    simStages:[{rainfall:120,soil:75,water:1.6},{rainfall:220,soil:88,water:2.4},{rainfall:310,soil:95,water:3.1},{rainfall:380,soil:98,water:3.6}],
+    localities:[
+      { id:'KDN', name:'Kedarnath', lat:30.7346, lng:79.0669, terrain:'Very High',
+        rainfall:130, soil:80, water:1.9, forecastHeavy:true,
+        events:[{date:'16-17 June 2013', rainfall:380, soil:98, water:3.6, outcome:'A multi-day cloudburst over the upper Mandakini catchment triggered flash floods and landslides that devastated Kedarnath town; thousands of pilgrims and residents were killed or went missing in one of the worst Himalayan disasters in recent Indian history.'}]},
+      { id:'RMB', name:'Rambara', lat:30.72, lng:79.03, terrain:'Very High',
+        rainfall:118, soil:76, water:1.7, forecastHeavy:true,
+        events:[{date:'16-17 June 2013', rainfall:365, soil:96, water:3.3, outcome:'The settlement along the pilgrim route was almost entirely swept away by the flash flood and debris flow.'}]},
+      { id:'GRK', name:'Gaurikund', lat:30.6875, lng:79.0206, terrain:'High',
+        rainfall:96, soil:70, water:1.4, forecastHeavy:true,
+        events:[{date:'16-17 June 2013', rainfall:320, soil:90, water:2.7, outcome:'Flash floods damaged the road-head town, cutting off the route toward Kedarnath for weeks.'}]},
+      { id:'SNP', name:'Sonprayag', lat:30.6699, lng:78.9491, terrain:'Moderate',
+        rainfall:64, soil:58, water:1.0, forecastHeavy:false,
+        events:[{date:'16-17 June 2013', rainfall:250, soil:82, water:2.0, outcome:'Rising water at the Mandakini-Son confluence damaged riverside structures and vehicles.'}]},
+      { id:'GPK', name:'Guptkashi', lat:30.5333, lng:79.0833, terrain:'Low',
+        rainfall:34, soil:40, water:0.55, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'SUP', city:'Supaul', district:'Supaul District', state:'Bihar',
+    basin:'Kosi River Basin', riverName:'Kosi river',
+    center:[26.20, 86.62], zoom:10, flagship:'SUP', boundaryRadius:1400, simLabel:'Simulate Kosi Embankment Breach',
+    sourceNote:'Locality names and the 2008 embankment-breach event described for this basin are drawn from real reporting on the Kosi floods. Soil-moisture and water-level figures are estimated for this prototype; live readings are simulated.',
+    footnote:'*The August 2008 date and general description reflect real reported events on the Kosi. Soil-moisture and water-level figures are estimated for this prototype.',
+    riverPath:[[26.65,86.75],[26.45,86.68],[26.32,86.60],[26.12,86.61],[25.90,86.60]],
+    simStages:[{rainfall:60,soil:65,water:1.3},{rainfall:110,soil:80,water:2.0},{rainfall:170,soil:90,water:2.6},{rainfall:230,soil:95,water:3.0}],
+    localities:[
+      { id:'SUP', name:'Supaul Town', lat:26.1245, lng:86.6060, terrain:'Very High',
+        rainfall:78, soil:74, water:1.5, forecastHeavy:true,
+        events:[{date:'18 Aug 2008', rainfall:230, soil:95, water:3.0, outcome:'The Kosi breached its eastern embankment upstream at Kusaha and shifted course, inundating large parts of Supaul district and displacing well over a million people across north Bihar.'}]},
+      { id:'NRM', name:'Nirmali', lat:26.3167, lng:86.5833, terrain:'Very High',
+        rainfall:82, soil:76, water:1.6, forecastHeavy:true,
+        events:[{date:'18 Aug 2008', rainfall:220, soil:93, water:2.8, outcome:'The town, close to the old Kosi channel, was among the first areas inundated after the breach.'}]},
+      { id:'CHT', name:'Chhatapur', lat:26.2967, lng:86.6892, terrain:'High',
+        rainfall:58, soil:64, water:1.15, forecastHeavy:false,
+        events:[{date:'18 Aug 2008', rainfall:180, soil:85, water:2.2, outcome:'Farmland and village roads were submerged as the shifted river course spread eastward.'}]},
+      { id:'KSP', name:'Kishanpur', lat:26.05, lng:86.65, terrain:'Moderate',
+        rainfall:36, soil:48, water:0.7, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'ERN', city:'Aluva', district:'Ernakulam District', state:'Kerala',
+    basin:'Periyar River Basin', riverName:'Periyar river',
+    center:[10.14, 76.38], zoom:11.5, flagship:'ALV', boundaryRadius:900, simLabel:'Simulate Periyar Dam-Release Flood',
+    sourceNote:'Locality names and the August 2018 event described for this basin are drawn from real reporting on the Kerala floods. Soil-moisture and water-level figures are estimated for this prototype; live readings are simulated.',
+    footnote:'*The August 2018 date and general description reflect real reported events on the Periyar. Soil-moisture and water-level figures are estimated for this prototype.',
+    riverPath:[[10.25,76.90],[10.20,76.60],[10.17,76.43],[10.11,76.35],[10.05,76.25]],
+    simStages:[{rainfall:90,soil:72,water:1.4},{rainfall:160,soil:85,water:2.0},{rainfall:220,soil:92,water:2.5},{rainfall:280,soil:96,water:2.9}],
+    localities:[
+      { id:'ALV', name:'Aluva', lat:10.1075, lng:76.3517, terrain:'Very High',
+        rainfall:110, soil:80, water:1.7, forecastHeavy:true,
+        events:[{date:'Aug 2018', rainfall:280, soil:96, water:2.9, outcome:'Unprecedented monsoon rainfall combined with large releases from the Idukki and Idamalayar dams caused the Periyar to overflow, submerging Aluva in one of the worst floods Kerala has recorded in nearly a century.'}]},
+      { id:'KLD', name:'Kalady', lat:10.1730, lng:76.4327, terrain:'High',
+        rainfall:92, soil:73, water:1.4, forecastHeavy:true,
+        events:[{date:'Aug 2018', rainfall:250, soil:91, water:2.4, outcome:'The riverside town was cut off for days as the Periyar rose well above danger level.'}]},
+      { id:'NPV', name:'North Paravur', lat:10.1461, lng:76.2202, terrain:'Moderate',
+        rainfall:60, soil:60, water:0.95, forecastHeavy:false,
+        events:[{date:'Aug 2018', rainfall:200, soil:82, water:1.9, outcome:'Backwater areas downstream saw prolonged waterlogging as floodwaters drained slowly to the sea.'}]},
+      { id:'ANG', name:'Angamaly', lat:10.1958, lng:76.3862, terrain:'Moderate',
+        rainfall:48, soil:52, water:0.75, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'DMJ', city:'Dhemaji', district:'Dhemaji District', state:'Assam',
+    basin:'Brahmaputra River Basin', riverName:'Brahmaputra and Jiadhal rivers',
+    center:[27.55, 94.6], zoom:9.5, flagship:'DMJ', boundaryRadius:2500, simLabel:'Simulate Brahmaputra Monsoon Surge',
+    sourceNote:'Dhemaji is officially recognised as one of the most flood-affected districts in Assam, with annual inundation from the Brahmaputra and its tributaries. Live rainfall / soil / water-level readings are simulated for this prototype.',
+    footnote:'*Dhemaji district flood-prone status is real and well documented; specific dated events, soil-moisture and water-level figures are illustrative estimates for this prototype.',
+    riverPath:[[27.9,95.5],[27.7,95.0],[27.55,94.7],[27.45,94.4],[27.3,94.1]],
+    simStages:[{rainfall:70,soil:70,water:1.3},{rainfall:130,soil:82,water:1.8},{rainfall:190,soil:90,water:2.2},{rainfall:250,soil:95,water:2.6}],
+    localities:[
+      { id:'DMJ', name:'Dhemaji Town', lat:27.4833, lng:94.5667, terrain:'Very High',
+        rainfall:88, soil:76, water:1.5, forecastHeavy:true,
+        events:[{date:'Annual monsoon flooding', rainfall:250, soil:95, water:2.6, outcome:'Dhemaji sits at the confluence of the Brahmaputra with the Jiadhal, Simen and Kumotia rivers; embankment breaches and bank erosion displace thousands of residents most monsoon seasons.'}]},
+      { id:'SLP', name:'Silapathar', lat:27.5333, lng:94.8333, terrain:'High',
+        rainfall:66, soil:65, water:1.1, forecastHeavy:false, events:[] },
+      { id:'JON', name:'Jonai', lat:27.7667, lng:95.3333, terrain:'High',
+        rainfall:70, soil:66, water:1.15, forecastHeavy:false, events:[] },
+      { id:'GGM', name:'Gogamukh', lat:27.4167, lng:94.3167, terrain:'Moderate',
+        rainfall:40, soil:50, water:0.7, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'MUM', city:'Mumbai', district:'Mumbai Suburban District', state:'Maharashtra',
+    basin:'Mithi River Basin', riverName:'Mithi river',
+    center:[19.08, 72.87], zoom:12.5, flagship:'KRL', boundaryRadius:650, simLabel:'Simulate Mithi River Flood',
+    sourceNote:'Locality names and the July 2005 event described for this basin are drawn from real reporting on the Mumbai floods. Soil-moisture and water-level figures are estimated for this prototype; live readings are simulated.',
+    footnote:'*The 26 July 2005 date and general description reflect real reported events on the Mithi river. Soil-moisture and water-level figures are estimated for this prototype.',
+    riverPath:[[19.14,72.91],[19.11,72.89],[19.075,72.865],[19.065,72.86],[19.045,72.84]],
+    simStages:[{rainfall:100,soil:72,water:1.3},{rainfall:190,soil:85,water:1.8},{rainfall:290,soil:92,water:2.3},{rainfall:380,soil:97,water:2.7}],
+    localities:[
+      { id:'KRL', name:'Kurla', lat:19.0728, lng:72.8826, terrain:'Very High',
+        rainfall:120, soil:80, water:1.6, forecastHeavy:true,
+        events:[{date:'26 July 2005', rainfall:380, soil:97, water:2.7, outcome:'A record single-day citywide rainfall total of nearly 944mm overwhelmed the narrowed, encroached Mithi river, flooding Kurla and paralysing Mumbai for several days.'}]},
+      { id:'KAL', name:'Kalina', lat:19.0759, lng:72.8479, terrain:'High',
+        rainfall:98, soil:74, water:1.4, forecastHeavy:true,
+        events:[{date:'26 July 2005', rainfall:340, soil:94, water:2.4, outcome:'Low-lying residential pockets near the river were flooded for over 24 hours.'}]},
+      { id:'BKC', name:'Bandra Kurla Complex', lat:19.0653, lng:72.8697, terrain:'High',
+        rainfall:92, soil:71, water:1.3, forecastHeavy:false,
+        events:[{date:'26 July 2005', rainfall:320, soil:92, water:2.2, outcome:'The business district, built partly on reclaimed Mithi floodplain, was inundated along with surrounding roads.'}]},
+      { id:'SKN', name:'Saki Naka', lat:19.1073, lng:72.8880, terrain:'Moderate',
+        rainfall:58, soil:56, water:0.9, forecastHeavy:false, events:[] },
+    ]
+  },
+  {
+    id:'KLU', city:'Kullu', district:'Kullu District', state:'Himachal Pradesh',
+    basin:'Beas River Basin', riverName:'Beas river',
+    center:[32.05, 77.15], zoom:10.5, flagship:'MNL', boundaryRadius:1100, simLabel:'Simulate Beas Flash Flood',
+    sourceNote:'Locality names and the July 2023 event described for this basin are drawn from real reporting on the Himachal Pradesh flash floods. Soil-moisture and water-level figures are estimated for this prototype; live readings are simulated.',
+    footnote:'*The July 2023 date and general description reflect real reported events on the Beas. Soil-moisture and water-level figures are estimated for this prototype.',
+    riverPath:[[32.30,77.15],[32.24,77.19],[32.12,77.17],[31.96,77.11],[31.88,77.15]],
+    simStages:[{rainfall:80,soil:68,water:1.2},{rainfall:150,soil:82,water:1.7},{rainfall:220,soil:90,water:2.2},{rainfall:300,soil:95,water:2.6}],
+    localities:[
+      { id:'MNL', name:'Manali', lat:32.2432, lng:77.1892, terrain:'Very High',
+        rainfall:100, soil:76, water:1.5, forecastHeavy:true,
+        events:[{date:'9-10 July 2023', rainfall:300, soil:95, water:2.6, outcome:'Intense monsoon rain and cloudbursts across the upper Beas catchment triggered flash floods that swept away buildings, roads and bridges along the Kullu-Manali belt, marking one of the worst disasters recorded in Himachal Pradesh.'}]},
+      { id:'KLT', name:'Kullu Town', lat:31.9592, lng:77.1089, terrain:'Very High',
+        rainfall:94, soil:74, water:1.4, forecastHeavy:true,
+        events:[{date:'9-10 July 2023', rainfall:280, soil:93, water:2.4, outcome:'The district headquarters saw riverside markets and parking areas washed away as the Beas rose sharply overnight.'}]},
+      { id:'BHT', name:'Bhuntar', lat:31.8833, lng:77.1500, terrain:'High',
+        rainfall:76, soil:66, water:1.2, forecastHeavy:false,
+        events:[{date:'9-10 July 2023', rainfall:240, soil:88, water:2.0, outcome:'Flooding near the river damaged the approach to Kullu-Manali airport and nearby orchards.'}]},
+      { id:'KTR', name:'Katrain', lat:32.1167, lng:77.1667, terrain:'Moderate',
+        rainfall:46, soil:50, water:0.8, forecastHeavy:false, events:[] },
+    ]
+  },
+];
+
+
+/* attach runtime state + baseline snapshot to every locality in every region */
+regions.forEach(r=>{
+  r.localities.forEach(v=>{
+    v.trend = [];
+    v.sensorHistory = { rainfall:[], soil:[], water:[] };
+    v.baseline = { rainfall:v.rainfall, soil:v.soil, water:v.water };
+  });
+});
+
+let alerts = [];
+const INDIA_STATES = [
+  ['Andhra Pradesh','Amaravati',16.5133,80.5165],['Arunachal Pradesh','Itanagar',27.0844,93.6053],['Assam','Dispur',26.1433,91.7898],['Bihar','Patna',25.5941,85.1376],['Chhattisgarh','Raipur',21.2514,81.6296],['Goa','Panaji',15.4909,73.8278],['Gujarat','Gandhinagar',23.2156,72.6369],['Haryana','Chandigarh',30.7333,76.7794],['Himachal Pradesh','Shimla',31.1048,77.1734],['Jharkhand','Ranchi',23.3441,85.3096],['Karnataka','Bengaluru',12.9716,77.5946],['Kerala','Thiruvananthapuram',8.5241,76.9366],['Madhya Pradesh','Bhopal',23.2599,77.4126],['Maharashtra','Mumbai',19.0760,72.8777],['Manipur','Imphal',24.8170,93.9368],['Meghalaya','Shillong',25.5788,91.8933],['Mizoram','Aizawl',23.7271,92.7176],['Nagaland','Kohima',25.6751,94.1086],['Odisha','Bhubaneswar',20.2961,85.8245],['Punjab','Chandigarh',30.7333,76.7794],['Rajasthan','Jaipur',26.9124,75.7873],['Sikkim','Gangtok',27.3389,88.6065],['Tamil Nadu','Chennai',13.0827,80.2707],['Telangana','Hyderabad',17.3850,78.4867],['Tripura','Agartala',23.8315,91.2868],['Uttar Pradesh','Lucknow',26.8467,80.9462],['Uttarakhand','Dehradun',30.3165,78.0322],['West Bengal','Kolkata',22.5726,88.3639],
+  ['Andaman and Nicobar Islands','Port Blair',11.6234,92.7265],['Chandigarh','Chandigarh',30.7333,76.7794],['Dadra and Nagar Haveli and Daman and Diu','Daman',20.3974,72.8328],['Delhi','New Delhi',28.6139,77.2090],['Jammu and Kashmir','Srinagar',34.0837,74.7973],['Ladakh','Leh',34.1526,77.5770],['Lakshadweep','Kavaratti',10.5669,72.6420],['Puducherry','Puducherry',11.9416,79.8083]
+];
+const API_CONFIG = {
+  openWeatherKey: localStorage.getItem('flashfusion_openweather_key') || '',
+  openWeatherBase: 'https://api.openweathermap.org/data/2.5'
+};
+const syntheticRegions = {};
+function slugState(s){ return s.toUpperCase().replace(/[^A-Z0-9]+/g,'_'); }
+function makeSyntheticRegion(stateName, capital, lat, lng){
+  const id='IND_'+slugState(stateName);
+  return {id,city:capital,district:`${stateName} — Statewide`,state:stateName,basin:`${stateName} Flood Monitoring Zone`,riverName:'Regional drainage network',center:[lat,lng],zoom:6.5,flagship:'CAP',boundaryRadius:18000,simLabel:`Simulate ${stateName} Heavy-Rain Event`,
+    sourceNote:`India-wide location coverage for ${stateName}. Local flood readings are illustrative until validated state, district, river-gauge and IoT feeds are connected.`,
+    footnote:`This statewide view is a prototype coverage layer; it does not represent an official flood forecast.`,
+    riverPath:[[lat+0.25,lng-0.35],[lat+0.12,lng-0.15],[lat,lng],[lat-0.12,lng+0.16],[lat-0.24,lng+0.35]],
+    simStages:[{rainfall:45,soil:45,water:.5},{rainfall:95,soil:65,water:1.0},{rainfall:160,soil:82,water:1.7},{rainfall:230,soil:92,water:2.4}],
+    localities:[{id:'CAP',name:`${capital} Monitoring Point`,lat,lng,terrain:'Moderate',rainfall:42,soil:45,water:.5,forecastHeavy:false,events:[]} ]};
+}
+INDIA_STATES.forEach(([state,capital,lat,lng])=>syntheticRegions[state]=makeSyntheticRegion(state,capital,lat,lng));
+
+let selectedRegionId = 'VJA';
+let selectedId = 'SN';
+let tickCount = 0;
+let simRunning = false;
+let liveTimer = null;
+
+function currentRegion(){ return regions.find(r=>r.id===selectedRegionId) || Object.values(syntheticRegions).find(r=>r.id===selectedRegionId) || syntheticRegions[INDIA_STATES[0][0]]; }
+function currentLocalities(){ return currentRegion().localities; }
+
+/* ---------------- risk engine ---------------- */
+function computeRisk(v){
+  const rainfallNorm = Math.min(100, (v.rainfall / 400) * 100);
+  const soilNorm = Math.min(100, v.soil);
+  const waterNorm = Math.min(100, (v.water / 4) * 100);
+  const terrainNorm = TERRAIN[v.terrain];
+  let score = 0.35*rainfallNorm + 0.25*soilNorm + 0.25*waterNorm + 0.15*terrainNorm;
+  if (v.forecastHeavy) score += 6;
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let level, leadTime;
+  if (score >= 80){ level='CRITICAL'; leadTime='1 - 2 Hours'; }
+  else if (score >= 60){ level='HIGH'; leadTime='2 - 4 Hours'; }
+  else if (score >= 35){ level='MODERATE'; leadTime='4 - 8 Hours'; }
+  else { level='LOW'; leadTime='No immediate impact'; }
+
+  return {score, level, leadTime, rainfallNorm, soilNorm, waterNorm, terrainNorm};
+}
+
+function riskColor(level){
+  return level==='CRITICAL' ? '#f43f5e' :
+         level==='HIGH' ? 'var(--orange)' :
+         level==='MODERATE' ? 'var(--yellow)' : 'var(--green)';
+}
+function riskClass(level){
+  return level==='CRITICAL' ? 'risk-critical' :
+         level==='HIGH' ? 'risk-high' :
+         level==='MODERATE' ? 'risk-moderate' : 'risk-low';
+}
+function riskIcon(level){
+  return level==='CRITICAL' ? '🔴' : level==='HIGH' ? '🟠' : level==='MODERATE' ? '🟡' : '🟢';
+}
+
+/* ---------------- historical similarity ---------------- */
+function similarity(v, ev){
+  const dR = (v.rainfall - ev.rainfall) / 400;
+  const dS = (v.soil - ev.soil) / 100;
+  const dW = (v.water - ev.water) / 4;
+  const dist = Math.sqrt(dR*dR + dS*dS + dW*dW) / Math.sqrt(3);
+  return Math.max(0, Math.round((1 - dist) * 100));
+}
+function bestMatch(v){
+  if (!v.events.length) return null;
+  let best = null;
+  v.events.forEach(ev=>{
+    const s = similarity(v, ev);
+    if (!best || s > best.sim) best = {...ev, sim:s};
+  });
+  return best;
+}
+function peakRainfall(v){
+  if (!v.events.length) return null;
+  return Math.max(...v.events.map(e=>e.rainfall));
+}
+
+/* ---------------- alerts ---------------- */
+function pushAlert(v, level, prevLevel){
+  const icon = riskIcon(level);
+  alerts.unshift({
+    id: Date.now()+Math.random(),
+    village: v.name,
+    level, icon,
+    text: `Risk level changed to ${level}`,
+    detail: prevLevel ? `(was ${prevLevel})` : '',
+    time: new Date()
+  });
+  if (alerts.length > 60) alerts.pop();
+  if (level==='CRITICAL' || level==='HIGH') flashAlertPipeline();
+}
+function timeAgo(d){
+  const s = Math.floor((Date.now()-d.getTime())/1000);
+  if (s<5) return 'just now';
+  if (s<60) return s+'s ago';
+  const m = Math.floor(s/60);
+  if (m<60) return m+'m ago';
+  return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+/* ---------------- signature feature: WHY + HOW FAST + HOW MUCH TIME ---------------- */
+const TICK_MINUTES = 15;
+
+function trendSlope(v, n=5){
+  const arr = v.trend.slice(-n);
+  if (arr.length < 2) return 0;
+  let diffs = [];
+  for (let i=1;i<arr.length;i++) diffs.push(arr[i].score - arr[i-1].score);
+  return diffs.reduce((a,b)=>a+b,0) / diffs.length;
+}
+function escalationStatus(slope){
+  if (slope >= 3) return {text:'rapidly increasing', arrow:'↑↑'};
+  if (slope >= 1) return {text:'increasing', arrow:'↑'};
+  if (slope <= -2) return {text:'decreasing', arrow:'↓'};
+  return {text:'stable', arrow:'→'};
+}
+function estimateWindow(v){
+  const slope = trendSlope(v);
+  const r = computeRisk(v);
+  if (slope <= 0.4) return null;
+  const remaining = Math.max(5, 100 - r.score);
+  let ticksRemaining = remaining / slope;
+  ticksRemaining = Math.max(1, Math.min(ticksRemaining, 30));
+  const totalMinutes = Math.round(ticksRemaining * TICK_MINUTES);
+  const h = Math.floor(totalMinutes/60), m = totalMinutes % 60;
+  return (h>0 ? h+'h ' : '') + m + 'm';
+}
+function factorTrend(hist, epsilon){
+  if (hist.length < 2) return '→';
+  const back = hist[Math.max(0, hist.length-4)];
+  const now = hist[hist.length-1];
+  const diff = now - back;
+  if (diff > epsilon) return '↑';
+  if (diff < -epsilon) return '↓';
+  return '→';
+}
+function renderEscalationPanel(containerId, forceVillageId){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const list = currentLocalities();
+  let v;
+  if (forceVillageId){
+    v = list.find(x=>x.id===forceVillageId) || list[0];
+  } else {
+    const escalating = list.filter(x=> trendSlope(x) > 0.4);
+    const pool = escalating.length ? escalating : list;
+    v = pool.reduce((a,b)=> computeRisk(b).score > computeRisk(a).score ? b : a);
+  }
+  const r = computeRisk(v);
+  const slope = trendSlope(v);
+  const status = escalationStatus(slope);
+  const win = estimateWindow(v);
+  const isEscalating = slope > 0.4 && r.score >= 35;
+
+  const rainArrow = factorTrend(v.sensorHistory.rainfall, 6);
+  const soilArrow = factorTrend(v.sensorHistory.soil, 1.5);
+  const waterArrow = factorTrend(v.sensorHistory.water, 0.06);
+
+  const headline = isEscalating
+    ? `${riskIcon(r.level)} RISK ESCALATION DETECTED`
+    : `${riskIcon(r.level)} CURRENT STATUS — ${v.name}`;
+  const panelClass = isEscalating ? 'esc-'+r.level.toLowerCase() : 'esc-idle';
+
+  el.innerHTML = `
+    <div class="escalation-panel ${panelClass}">
+      <div class="esc-head">
+        <div class="esc-title">${headline}</div>
+        <span class="badge-risk ${riskClass(r.level)}">${v.name}</span>
+      </div>
+      <div class="esc-score">${r.score}% <span class="esc-arrow">${status.arrow}</span> <span class="esc-status">${status.text}</span></div>
+      <div class="esc-label">Why?</div>
+      <div class="esc-factors">
+        <span>🌧️ Rainfall ${rainArrow}</span>
+        <span>💧 Soil saturation ${soilArrow}</span>
+        <span>🌊 Upstream water level ${waterArrow}</span>
+        <span>⛰️ Terrain vulnerability ${v.terrain.toUpperCase()}</span>
+      </div>
+      ${win
+        ? `<div class="esc-window">⏱️ Estimated actionable window: <b>${win}</b></div>`
+        : `<div class="esc-window muted">⏱️ No rapid escalation detected right now — monitoring continues</div>`}
+    </div>
+  `;
+}
+function flashAlertPipeline(){
+  const node = document.getElementById('alertPipeStep');
+  if (!node) return;
+  node.classList.add('flash');
+  setTimeout(()=> node.classList.remove('flash'), 1800);
+}
+
+/* ---------------- live simulation tick ---------------- */
+function jitter(val, amount, min, max){
+  let n = val + (Math.random()-0.5)*amount;
+  return Math.max(min, Math.min(max, n));
+}
+
+function tick(){
+  tickCount++;
+  currentLocalities().forEach(v=>{
+    const prev = computeRisk(v).level;
+    v.rainfall = jitter(v.rainfall, 10, 0, 400);
+    v.soil = jitter(v.soil, 2.2, 5, 100);
+    v.water = jitter(v.water, 0.1, 0, 3.6);
+
+    v.sensorHistory.rainfall.push(v.rainfall);
+    v.sensorHistory.soil.push(v.soil);
+    v.sensorHistory.water.push(v.water);
+    ['rainfall','soil','water'].forEach(k=>{ if (v.sensorHistory[k].length>24) v.sensorHistory[k].shift(); });
+
+    const r = computeRisk(v);
+    v.trend.push({t: tickCount, score:r.score});
+    if (v.trend.length > 40) v.trend.shift();
+
+    if (r.level !== prev) pushAlert(v, r.level, prev);
+  });
+  document.getElementById('lastUpdated').textContent = 'Last updated just now';
+  renderActiveView();
+}
+
+function seedList(list){
+  for(let i=0;i<14;i++){
+    tickCount++;
+    list.forEach(v=>{
+      const jr = jitter(v.rainfall, 16, 0, 400);
+      const js = jitter(v.soil, 4, 5, 100);
+      const jw = jitter(v.water, 0.18, 0, 3.6);
+      const tmp = {...v, rainfall:jr, soil:js, water:jw};
+      const r = computeRisk(tmp);
+      v.trend.push({t:tickCount, score:r.score});
+      v.sensorHistory.rainfall.push(jr);
+      v.sensorHistory.soil.push(js);
+      v.sensorHistory.water.push(jw);
+    });
+  }
+}
+function seedAll(){
+  regions.forEach(r=> seedList(r.localities));
+  alerts = [];
+  currentLocalities().forEach(v=>{
+    const r = computeRisk(v);
+    pushAlert(v, r.level, null);
+  });
+  alerts.forEach((a,i)=>{ a.time = new Date(Date.now() - (alerts.length-i)*40000); });
+}
+
+/* =========================================================================
+   RENDERING
+   ========================================================================= */
+const nav = document.querySelectorAll('.nav-item');
+const views = document.querySelectorAll('.view');
+const titles = {
+  dashboard:['Dashboard', r=>`${r.city}, ${r.district}, ${r.state} — ${r.basin}, ${r.localities.length} monitored localities`],
+  map:['Risk Map', r=>`Interactive GIS view of localities along the ${r.riverName}`],
+  sensors:['Sensor Monitor','Simulated IoT feed — rain gauge · soil probe · water-level sensor'],
+  prediction:['Prediction & History', r=>`ML-style risk scoring compared against the ${r.basin} flood archive`],
+  alerts:['Alerts', r=>`Full alert log for ${r.basin}`],
+  historical:['Historical Events', r=>`Reported flood events for ${r.basin}`],
+};
+let activeView = 'dashboard';
+
+nav.forEach(item=>{
+  item.addEventListener('click', ()=> switchView(item.dataset.view));
+});
+document.addEventListener('click', (e)=>{
+  const link = e.target.closest('[data-view-link]');
+  if (link) switchView(link.dataset.viewLink);
+});
+
+function switchView(name){
+  activeView = name;
+  nav.forEach(n=>n.classList.toggle('active', n.dataset.view===name));
+  views.forEach(v=>v.classList.toggle('active', v.id==='view-'+name));
+  renderActiveView();
+  if (name==='map') setTimeout(()=>{ if(map) map.invalidateSize(); }, 50);
+}
+
+function updateRegionInfo(){
+  const r = currentRegion();
+  document.getElementById('heroTag').textContent = `Multi-Source Intelligence for Hyper-Local Flash-Flood Prediction — ${r.basin}, ${r.city}`;
+  document.getElementById('regionBanner').innerHTML = `<b>Region: ${r.city}, ${r.district}, ${r.state} — ${r.basin}.</b> ${r.sourceNote}`;
+  document.getElementById('mapTitleDash').textContent = `🗺️ Risk Map — ${r.basin}`;
+  document.getElementById('mapHintFull').textContent = `${r.localities.length} localities along the ${r.riverName}`;
+  document.getElementById('legendRiverLabel').textContent = `— ${r.riverName} (approx. course)`;
+  document.getElementById('historicalFootnote').textContent = r.footnote;
+  const tEntry = titles[activeView];
+  document.getElementById('pageTitle').textContent = tEntry[0];
+  document.getElementById('pageSub').textContent = typeof tEntry[1]==='function' ? tEntry[1](r) : tEntry[1];
+  if (!simRunning) document.getElementById('btnSimulate').textContent = `▶️  ${r.simLabel}`;
+}
+
+function renderActiveView(){
+  updateRegionInfo();
+  renderStatGrid();
+  renderDetailPanel();
+  renderRecentAlerts();
+  renderVillageListDash();
+  renderWeather();
+  updateMapMarkers();
+  if (activeView==='dashboard'){ renderTrendChart(); renderBarChart(); renderEscalationPanel('escalationPanelDash'); renderDashboardMap(); }
+  if (activeView==='map'){ renderDetailPanel(true); renderBroadcastMap(); }
+  if (activeView==='sensors'){ renderSensors(); }
+  if (activeView==='prediction'){ renderPrediction(); renderEscalationPanel('escalationPanelPred', selectedId); }
+  if (activeView==='alerts'){ renderAlertsFull(); }
+  if (activeView==='historical'){ renderHistoricalTable(); }
+  document.getElementById('alertCount').textContent = alerts.length;
+}
+
+function renderStatGrid(){
+  const list = currentLocalities();
+  const counts = {LOW:0,MODERATE:0,HIGH:0,CRITICAL:0};
+  list.forEach(v=> counts[computeRisk(v).level]++ );
+  const cards = [
+    {label:'Total Localities', value: list.length, sub: currentRegion().basin, color:'var(--accent)'},
+    {label:'Low Risk', value: counts.LOW, color:'var(--green)'},
+    {label:'Moderate Risk', value: counts.MODERATE, color:'var(--yellow)'},
+    {label:'High Risk', value: counts.HIGH, color:'var(--orange)'},
+    {label:'Critical Risk', value: counts.CRITICAL, color:'#f43f5e'},
+  ];
+  document.getElementById('statGrid').innerHTML = cards.map(c=>`
+    <div class="card stat-card">
+      <div class="label">${c.label} ${c.sub? '' : `<span class="swatch" style="background:${c.color}"></span>`}</div>
+      <div class="value">${c.value} ${c.sub?`<small>${c.sub}</small>`:''}</div>
+    </div>
+  `).join('');
+}
+
+function renderDetailPanel(){
+  const list = currentLocalities();
+  const v = list.find(x=>x.id===selectedId) || list[0];
+  const r = computeRisk(v);
+  const match = bestMatch(v);
+  const html = `
+    <div class="vname">${v.name}</div>
+    <div class="vloc">📍 ${currentRegion().city} · Floodplain exposure: ${v.terrain}</div>
+    <div class="risk-banner" style="border-color:${riskColor(r.level)}44;background:${riskColor(r.level)}14;">
+      <div class="flex" style="justify-content:space-between;align-items:center;">
+        <div>
+          <div class="big" style="color:${riskColor(r.level)}">${r.level}</div>
+          <div class="sub">Risk score ${r.score}%</div>
+        </div>
+        <span class="badge-risk ${riskClass(r.level)}">${r.level} RISK</span>
+      </div>
+      <div class="impact">🕐 Estimated impact window: <b>${r.leadTime}</b></div>
+    </div>
+    <div class="panel-head"><h3 style="font-size:12.5px;">Key Factors</h3></div>
+    <div class="factor-row"><span class="fname">🌧️ Rainfall (mm/24hr)</span><span class="fval">${v.rainfall.toFixed(0)} <span class="ftag">${tag(v.rainfall,[60,140,260])}</span></span></div>
+    <div class="factor-row"><span class="fname">💧 Soil Moisture (%)</span><span class="fval">${v.soil.toFixed(0)} <span class="ftag">${tag(v.soil,[40,65,85])}</span></span></div>
+    <div class="factor-row"><span class="fname">🌊 Water Level (m)</span><span class="fval">${v.water.toFixed(2)} <span class="ftag">${tag(v.water,[1.0,1.8,2.6])}</span></span></div>
+    <div class="factor-row"><span class="fname">⛰️ Floodplain Exposure</span><span class="fval">${v.terrain}</span></div>
+    <div class="factor-row"><span class="fname">📚 Closest historical match</span><span class="fval">${match? match.sim+'% ('+match.date+')' : '—'}</span></div>
+    <div class="btn mt16" style="width:100%;justify-content:center;" data-view-link="prediction">View Detailed Analysis →</div>
+  `;
+  const d1 = document.getElementById('detailPanel');
+  if (d1) d1.innerHTML = html;
+  const d2 = document.getElementById('detailPanel2');
+  if (d2) d2.innerHTML = html;
+}
+function tag(val, thresholds){
+  if (val < thresholds[0]) return 'Low';
+  if (val < thresholds[1]) return 'Moderate';
+  if (val < thresholds[2]) return 'High';
+  return 'Very High';
+}
+
+function renderRecentAlerts(){
+  const box = document.getElementById('recentAlerts');
+  if (!alerts.length){ box.innerHTML = '<div class="empty">No alerts yet.</div>'; return; }
+  box.innerHTML = alerts.slice(0,5).map(a=>`
+    <div class="alert-item">
+      <div class="alert-ic">${a.icon}</div>
+      <div>
+        <div class="t1">${a.village} — ${a.level}</div>
+        <div class="t2">${a.text} ${a.detail}</div>
+      </div>
+      <div class="alert-time">${timeAgo(a.time)}</div>
+    </div>
+  `).join('');
+}
+function renderAlertsFull(){
+  document.getElementById('alertsHint').textContent = alerts.length + ' events logged this session';
+  const box = document.getElementById('alertsFull');
+  if (!alerts.length){ box.innerHTML = '<div class="empty">No alerts yet.</div>'; return; }
+  box.innerHTML = alerts.map(a=>`
+    <div class="alert-item">
+      <div class="alert-ic">${a.icon}</div>
+      <div>
+        <div class="t1">${a.village} — ${a.level} RISK</div>
+        <div class="t2">${a.text} ${a.detail}</div>
+      </div>
+      <div class="alert-time">${timeAgo(a.time)}</div>
+    </div>
+  `).join('');
+}
+
+function renderVillageListDash(){
+  const box = document.getElementById('villageListDash');
+  box.innerHTML = currentLocalities().map(v=>{
+    const r = computeRisk(v);
+    return `<div class="vrow ${v.id===selectedId?'sel':''}" data-vid="${v.id}">
+      <span class="dot" style="color:${riskColor(r.level)}"></span>
+      <span class="vname">${v.name}</span>
+      <span class="vscore">${r.score}%</span>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.vrow').forEach(row=>{
+    row.addEventListener('click', ()=> setSelectedId(row.dataset.vid));
+  });
+}
+
+function renderWeather(){
+  const hours = ['11 AM','12 PM','1 PM','2 PM','3 PM','4 PM'];
+  const icons = ['🌦️','🌧️','🌧️','🌧️','🌧️','⛅'];
+  const temps = [29,28,28,27,27,27];
+  document.getElementById('weatherStrip').innerHTML = hours.map((h,i)=>`
+    <div class="wcol"><div class="hr">${h}</div><div class="ic">${icons[i]}</div><div class="tm">${temps[i]}°</div></div>
+  `).join('');
+  const v=currentLocalities()[0];
+  document.getElementById('weatherNote').textContent = v.liveWeather ? `Live API: ${v.liveWeather.temp?.toFixed?.(1) ?? '--'}°C · ${v.liveWeather.humidity ?? '--'}% humidity · ${v.liveWeather.description}` : 'Regional forecast is simulated in prototype mode. Configure an API key for live weather observations.';
+}
+
+/* ---------------- charts ---------------- */
+let trendChart, predChart, barChart;
+function renderTrendChart(){
+  const list = currentLocalities();
+  const v = list.find(x=>x.id===selectedId) || list[0];
+  document.getElementById('trendVillageName').textContent = v.name;
+  const labels = v.trend.map((p,i)=> i);
+  const data = v.trend.map(p=>p.score);
+  const ctx = document.getElementById('trendChart');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      data, borderColor: riskColor(computeRisk(v).level), backgroundColor: riskColor(computeRisk(v).level)+'22',
+      fill:true, tension:.35, pointRadius:0, borderWidth:2
+    }]},
+    options:{
+      responsive:true, animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{display:false},
+        y:{min:0,max:100, grid:{color:'#182236'}, ticks:{color:'#5b6780'}}
+      }
+    }
+  });
+}
+
+function renderBarChart(){
+  const ctx = document.getElementById('barChart');
+  const list = currentLocalities();
+  const labels = list.map(v=>v.name);
+  const data = list.map(v=>computeRisk(v).score);
+  const colors = list.map(v=>riskColor(computeRisk(v).level));
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor: colors, borderRadius:5, maxBarThickness:34 }]},
+    options:{
+      responsive:true, animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ ticks:{color:'#8b98b0', font:{size:10.5}}, grid:{display:false} },
+        y:{ min:0, max:100, grid:{color:'#182236'}, ticks:{color:'#5b6780'} }
+      }
+    }
+  });
+}
+
+function renderPrediction(){
+  const list = currentLocalities();
+  const v = list.find(x=>x.id===selectedId) || list[0];
+  const r = computeRisk(v);
+  document.getElementById('predHint').textContent = `Current score: ${r.score}% · ${r.level}`;
+
+  const labels = v.trend.map((p,i)=>i);
+  const data = v.trend.map(p=>p.score);
+  const ctx = document.getElementById('predChart');
+  if (predChart) predChart.destroy();
+  predChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      data, borderColor: riskColor(r.level), backgroundColor: riskColor(r.level)+'22',
+      fill:true, tension:.3, pointRadius:2, borderWidth:2
+    }]},
+    options:{
+      responsive:true, animation:false,
+      plugins:{legend:{display:false}},
+      scales:{ x:{display:false}, y:{min:0,max:100, grid:{color:'#182236'}, ticks:{color:'#5b6780'}} }
+    }
+  });
+
+  document.getElementById('predFactors').innerHTML = `
+    <div class="factor-row"><span class="fname">🌧️ Rainfall (24hr)</span><span class="fval">${v.rainfall.toFixed(0)} mm</span></div>
+    <div class="factor-row"><span class="fname">💧 Soil saturation</span><span class="fval">${v.soil.toFixed(0)}%</span></div>
+    <div class="factor-row"><span class="fname">🌊 Water level</span><span class="fval">${v.water.toFixed(2)} m</span></div>
+    <div class="factor-row"><span class="fname">⛰️ Floodplain exposure</span><span class="fval">${v.terrain}</span></div>
+    <div class="factor-row"><span class="fname">📚 Historical similarity</span><span class="fval">${bestMatch(v)? bestMatch(v).sim+'%' : 'No records'}</span></div>
+  `;
+
+  const box = document.getElementById('historyMatch');
+  if (!v.events.length){
+    box.innerHTML = '<div class="empty">No recorded flood events for this locality — treated as a lower-confidence baseline.</div>';
+  } else {
+    box.innerHTML = v.events.map(ev=>{
+      const s = similarity(v, ev);
+      return `
+        <div class="mt10" style="padding-bottom:10px;border-bottom:1px solid var(--border-soft);">
+          <div class="flex" style="justify-content:space-between;">
+            <b class="small">${ev.date}</b>
+            <span class="small muted">${s}% similar</span>
+          </div>
+          <div class="sim-bar-track mt10"><div class="sim-bar-fill" style="width:${s}%"></div></div>
+          <div class="small muted mt10">${ev.outcome}</div>
+          <div class="small muted">Recorded: ${ev.rainfall}mm rainfall · ${ev.soil}% soil (est.) · ${ev.water}m water (est.)</div>
+        </div>`;
+    }).join('');
+  }
+}
+
+function renderSensors(){
+  const list = currentLocalities();
+  const v = list.find(x=>x.id===selectedId) || list[0];
+  const peak = peakRainfall(v);
+  const sensors = [
+    {name:'Rain Gauge 01', key:'rainfall', unit:'mm', label:'Rainfall (24hr)', icon:'🌧️'},
+    {name:'Soil Sensor 01', key:'soil', unit:'%', label:'Soil Moisture', icon:'💧'},
+    {name:'Water Sensor 01', key:'water', unit:'m', label:'Water Level (gauge)', icon:'🌊'},
+  ];
+  document.getElementById('sensorGrid').innerHTML = sensors.map(s=>{
+    const val = v[s.key];
+    const hist = v.sensorHistory[s.key];
+    const spark = sparkSvg(hist);
+    let compareLine = '';
+    if (s.key==='rainfall' && peak){
+      const pct = Math.min(100, Math.round((val/peak)*100));
+      compareLine = `<div class="speak">${pct}% of the ${peak}mm peak recorded in this locality's worst historical event</div>`;
+    }
+    return `
+      <div class="sensor-card">
+        <div class="shead">
+          <span class="sname">${s.icon} ${s.name}</span>
+          <span class="online"><span class="dot"></span>ONLINE</span>
+        </div>
+        <div class="sval">${val.toFixed(s.key==='water'?2:0)}${s.unit}</div>
+        <div class="slabel">${s.label} · ${v.name}</div>
+        <div class="spark">${spark}</div>
+        ${compareLine}
+      </div>`;
+  }).join('');
+}
+function sparkSvg(vals){
+  if (!vals.length) return '';
+  const w=220,h=34, max=Math.max(...vals), min=Math.min(...vals), range=(max-min)||1;
+  const pts = vals.map((v,i)=>{
+    const x = (i/(vals.length-1||1))*w;
+    const y = h - ((v-min)/range)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg width="100%" height="34" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/>
+  </svg>`;
+}
+
+function renderHistoricalTable(){
+  let rows = [];
+  currentLocalities().forEach(v=>{
+    v.events.forEach(ev=>{
+      rows.push({village:v.name, ...ev, sim: similarity(v, ev)});
+    });
+  });
+  rows.sort((a,b)=> b.sim - a.sim);
+  document.getElementById('historyTableBody').innerHTML = rows.map(r=>`
+    <tr>
+      <td>${r.village}</td>
+      <td>${r.date}</td>
+      <td>${r.rainfall} mm</td>
+      <td>${r.soil}%</td>
+      <td>${r.water} m</td>
+      <td>${r.outcome}</td>
+      <td><span class="sim-bar-track"><span class="sim-bar-fill" style="width:${r.sim}%"></span></span> ${r.sim}%</td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="empty">No historical events recorded.</td></tr>';
+}
+
+/* ---------------- selects ---------------- */
+function setSelectedId(id){
+  selectedId = id;
+  syncSelects();
+  renderActiveView();
+}
+function uniqueStates(){ return INDIA_STATES.map(x=>x[0]); }
+function regionsForState(state){
+  const live = regions.filter(r=>r.state===state);
+  return live.length ? live : [syntheticRegions[state]];
+}
+function setSelectedRegion(id){
+  selectedRegionId = id;
+  const r = currentRegion();
+  const flagshipExists = r.localities.some(x=>x.id===r.flagship);
+  selectedId = flagshipExists ? r.flagship : r.localities[0].id;
+  syncRegionSelects();
+  rebuildLocalitySelects();
+  loadRegionOnMaps();
+  renderActiveView();
+  fetchLiveWeather();
+}
+function fillLocalitySelect(el){
+  if (!el) return;
+  el.innerHTML = currentLocalities().map(v=>`<option value="${v.id}" ${v.id===selectedId?'selected':''}>${v.name}</option>`).join('');
+}
+function rebuildLocalitySelects(){
+  ['globalVillageSelect','sensorVillageSelect','predVillageSelect'].forEach(id=> fillLocalitySelect(document.getElementById(id)));
+}
+function syncSelects(){
+  ['globalVillageSelect','sensorVillageSelect','predVillageSelect'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.value = selectedId;
+  });
+}
+function bindLocalitySelectChange(el){
+  if (!el) return;
+  el.addEventListener('change', ()=> setSelectedId(el.value));
+}
+function fillStateSelect(){
+  const el = document.getElementById('stateSelect');
+  el.innerHTML = uniqueStates().map(s=>`<option value="${s}">${s}</option>`).join('');
+  el.value = currentRegion().state;
+  el.addEventListener('change', ()=>{
+    const list = regionsForState(el.value);
+    setSelectedRegion(list[0].id);
+  });
+}
+function fillDistrictSelect(){
+  const el = document.getElementById('districtSelect');
+  const list = regionsForState(currentRegion().state);
+  el.innerHTML = list.map(r=>`<option value="${r.id}" ${r.id===selectedRegionId?'selected':''}>${r.district} — ${r.basin} (${r.city})</option>`).join('');
+}
+function syncRegionSelects(){
+  const stateEl = document.getElementById('stateSelect');
+  if (stateEl) stateEl.value = currentRegion().state;
+  fillDistrictSelect();
+}
+
+/* ---------------- news-broadcast style flood graphic ---------------- */
+function escapeXml(s){
+  return String(s).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+}
+function overallStatusHeading(list, basin){
+  const levels = list.map(v=>computeRisk(v).level);
+  if (levels.includes('CRITICAL')) return `🔴 FLOOD WARNING — ${basin}`;
+  if (levels.includes('HIGH')) return `🟠 FLOOD WATCH — ${basin}`;
+  if (levels.includes('MODERATE')) return `🟡 MONITORING — ${basin}`;
+  return `🟢 ALL CLEAR — ${basin}`;
+}
+function buildBroadcastSVG(r, list, W, H){
+  const lats = list.map(v=>v.lat).concat(r.riverPath.map(p=>p[0]));
+  const lngs = list.map(v=>v.lng).concat(r.riverPath.map(p=>p[1]));
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const padLat = (maxLat-minLat)*0.22 || 0.05, padLng = (maxLng-minLng)*0.22 || 0.05;
+  const loLat = minLat-padLat, hiLat = maxLat+padLat, loLng = minLng-padLng, hiLng = maxLng+padLng;
+  function project(lat, lng){
+    const x = ((lng-loLng)/(hiLng-loLng)) * W;
+    const y = H - ((lat-loLat)/(hiLat-loLat)) * H;
+    return [x, y];
+  }
+
+  const riverPts = r.riverPath.map(p=>project(p[0], p[1]));
+  const riverD = 'M ' + riverPts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L ');
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" class="broadcast-svg" preserveAspectRatio="xMidYMid meet">`;
+  svg += `<defs>
+    <pattern id="bcastGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0 L0 0 0 40" fill="none" stroke="#101c33" stroke-width="1"/>
+    </pattern>
+  </defs>`;
+  svg += `<rect width="${W}" height="${H}" fill="#060a14"/>`;
+  svg += `<rect width="${W}" height="${H}" fill="url(#bcastGrid)"/>`;
+
+  /* river: glow + animated flow line + direction arrows + name badge */
+  svg += `<path d="${riverD}" fill="none" stroke="#0ea5e9" stroke-width="${W>500?16:11}" stroke-linecap="round" stroke-linejoin="round" opacity=".22"/>`;
+  svg += `<path d="${riverD}" fill="none" stroke="#38bdf8" stroke-width="${W>500?5:3.5}" stroke-linecap="round" stroke-linejoin="round" class="bcast-river-flow"/>`;
+  for (let i=0; i<riverPts.length-1; i++){
+    const [x1,y1] = riverPts[i], [x2,y2] = riverPts[i+1];
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+    const angle = Math.atan2(y2-y1, x2-x1) * 180/Math.PI;
+    svg += `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" transform="rotate(${angle.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)})" text-anchor="middle" fill="#bae6fd" font-size="${W>500?16:13}" font-weight="700">➤</text>`;
+  }
+  const midIdx = Math.floor(riverPts.length/2);
+  const [rmx, rmy] = riverPts[midIdx];
+  svg += `<g transform="translate(${rmx.toFixed(1)},${(rmy-18).toFixed(1)})">
+    <rect x="-78" y="-13" width="156" height="22" rx="11" fill="#0e1b30" stroke="#173357"/>
+    <text x="0" y="2" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="700">🌊 ${escapeXml(r.riverName)}</text>
+  </g>`;
+
+  /* locality nodes with leader-line callout labels, TV-graphic style */
+  const nodes = list.map(v=>{
+    const [x,y] = project(v.lat, v.lng);
+    return { v, x, y, risk: computeRisk(v) };
+  });
+  nodes.forEach((n, i)=>{
+    const color = riskColor(n.risk.level);
+    const labelAbove = n.y > H*0.42;
+    const dy = labelAbove ? -46 : 46;
+    const dx = (i % 2 === 0) ? 0 : ((i % 4 === 1) ? 46 : -46);
+    let lx = n.x + dx, ly = n.y + dy;
+    lx = Math.max(80, Math.min(W-80, lx));
+    ly = Math.max(26, Math.min(H-26, ly));
+    const isCritical = n.risk.level === 'CRITICAL';
+    const isSelected = n.v.id === selectedId;
+
+    svg += `<line x1="${n.x.toFixed(1)}" y1="${n.y.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#334155" stroke-width="1.4"/>`;
+    if (isCritical) svg += `<circle class="bcast-alert-ring" cx="${n.x.toFixed(1)}" cy="${n.y.toFixed(1)}" r="10" fill="none" stroke="${color}" stroke-width="2"/>`;
+    svg += `<circle cx="${n.x.toFixed(1)}" cy="${n.y.toFixed(1)}" r="8" fill="${color}" stroke="#060a14" stroke-width="2" ${isSelected?'style="filter:drop-shadow(0 0 6px #fff)"':''}/>`;
+
+    const name = n.v.name.toUpperCase();
+    const boxW = Math.max(96, Math.min(170, 20 + name.length*6.4));
+    svg += `<g transform="translate(${lx.toFixed(1)},${ly.toFixed(1)})" style="cursor:pointer;" data-locality="${n.v.id}">
+      <rect x="${-boxW/2}" y="-19" width="${boxW}" height="38" rx="7" fill="#0f1729" stroke="${color}" stroke-width="1.6"/>
+      <text x="0" y="-3" text-anchor="middle" fill="#e6ebf5" font-size="10.5" font-weight="800">${escapeXml(name)}</text>
+      <text x="0" y="12" text-anchor="middle" fill="${color}" font-size="10" font-weight="800">${n.risk.score}% ${n.risk.level}</text>
+    </g>`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+function wireBroadcastClicks(container){
+  container.querySelectorAll('[data-locality]').forEach(g=>{
+    g.addEventListener('click', ()=> setSelectedId(g.getAttribute('data-locality')));
+  });
+}
+function tickerText(){
+  if (!alerts.length) return 'FLASHFUSION MONITORING — no alerts logged yet for this basin.';
+  return alerts.slice(0,8).map(a=>`${a.icon} ${a.village.toUpperCase()}: ${a.level} RISK`).join('   •   ');
+}
+function renderBroadcastMap(){
+  const container = document.getElementById('broadcastMapContainer');
+  if (!container) return;
+  const r = currentRegion();
+  const list = currentLocalities();
+
+  document.getElementById('bcastHeading').textContent = overallStatusHeading(list, r.basin);
+  container.innerHTML = buildBroadcastSVG(r, list, 760, 440);
+  wireBroadcastClicks(container);
+
+  const track = document.getElementById('bcastTickerTrack');
+  if (track) track.textContent = tickerText();
+  document.getElementById('bcastClock').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function renderDashboardMap(){
+  const container = document.getElementById('dashBroadcastContainer');
+  if (!container) return;
+  const r = currentRegion();
+  const list = currentLocalities();
+
+  container.innerHTML = buildBroadcastSVG(r, list, 760, 260);
+  wireBroadcastClicks(container);
+
+  const track = document.getElementById('dashTickerTrack');
+  if (track) track.textContent = tickerText();
+}
+document.querySelectorAll('.vtbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.vtbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const mode = btn.dataset.mapview;
+    document.getElementById('broadcastWrap').style.display = mode==='broadcast' ? '' : 'none';
+    document.getElementById('gisWrap').style.display = mode==='gis' ? '' : 'none';
+    if (mode==='gis') setTimeout(()=>{ if (map) map.invalidateSize(); }, 60);
+    if (mode==='broadcast') renderBroadcastMap();
+  });
+});
+
+/* ---------------- map ---------------- */
+let map, markers = {}, boundaries = {};
+let regionLayerMain = null;
+
+function initMapsBase(){
+  map = L.map('map', {zoomControl:true, attributionControl:true});
+  const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+  });
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution:'Tiles &copy; Esri', maxZoom:19
+  });
+  const hybrid = L.layerGroup([
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19}),
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {maxZoom:19,subdomains:'abcd',opacity:.9})
+  ]);
+  street.addTo(map);
+  L.control.layers({'Street / terrain':street,'Satellite imagery':satellite,'Satellite + labels':hybrid},null,{collapsed:true}).addTo(map);
+}
+
+/* bearing in degrees (0 = north, 90 = east) from point a to point b */
+function bearing(a, b){
+  const lat1 = a[0]*Math.PI/180, lat2 = b[0]*Math.PI/180;
+  const dLng = (b[1]-a[1])*Math.PI/180;
+  const y = Math.sin(dLng)*Math.cos(lat2);
+  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLng);
+  return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
+}
+function midpoint(a, b){ return [(a[0]+b[0])/2, (a[1]+b[1])/2]; }
+
+/* draws the animated glow + dashed flow line, plus directional arrows */
+function drawRiverFlow(layerGroup, path, opts){
+  const wide = opts.wide, thin = opts.thin, arrows = opts.arrows;
+  L.polyline(path, {color:'#0ea5e9', weight:wide, opacity:.22}).addTo(layerGroup);
+  L.polyline(path, {color:'#38bdf8', weight:thin, opacity:.85, className: opts.flowClass}).addTo(layerGroup);
+  if (arrows){
+    for (let i=0; i<path.length-1; i++){
+      const brng = bearing(path[i], path[i+1]);
+      const mid = midpoint(path[i], path[i+1]);
+      const arrowIcon = L.divIcon({
+        className:'', html:`<div class="river-arrow-icon" style="transform:rotate(${brng-90}deg);">➤</div>`,
+        iconSize:[16,16], iconAnchor:[8,8]
+      });
+      L.marker(mid, {icon:arrowIcon, interactive:false}).addTo(layerGroup);
+    }
+  }
+}
+function drawRiverLabel(layerGroup, path, name){
+  const mid = path[Math.floor(path.length/2)];
+  const labelIcon = L.divIcon({
+    className:'', html:`<div class="river-label-badge">🌊 ${name}</div>`,
+    iconSize:[0,0], iconAnchor:[-8,-8]
+  });
+  L.marker(mid, {icon:labelIcon, interactive:false}).addTo(layerGroup);
+}
+
+function loadRegionOnMaps(){
+  const r = currentRegion();
+  if (regionLayerMain) map.removeLayer(regionLayerMain);
+  map.setView(r.center, r.zoom);
+
+  regionLayerMain = L.layerGroup().addTo(map);
+  drawRiverFlow(regionLayerMain, r.riverPath, {wide:9, thin:4, arrows:true, flowClass:'river-flow-main'});
+  drawRiverLabel(regionLayerMain, r.riverPath, r.riverName);
+
+  markers = {}; boundaries = {};
+  r.localities.forEach(v=>{
+    /* labeled boundary zone, always visible, plus a small precise center dot */
+    boundaries[v.id] = L.circle([v.lat, v.lng], {
+      radius: r.boundaryRadius, color: riskColor(computeRisk(v).level), weight:2,
+      fillColor: riskColor(computeRisk(v).level), fillOpacity:.16
+    }).addTo(regionLayerMain)
+      .bindTooltip(v.name, {permanent:true, direction:'top', className:'loc-boundary-label', offset:[0,-4]})
+      .on('click', ()=>{ setSelectedId(v.id); });
+
+    markers[v.id] = L.marker([v.lat, v.lng], {icon: markerIcon(v)}).addTo(regionLayerMain)
+      .bindPopup(popupHtml(v))
+      .on('click', ()=>{ setSelectedId(v.id); });
+  });
+  setTimeout(()=>{ map.invalidateSize(); }, 60);
+}
+function markerIcon(v){
+  const r = computeRisk(v);
+  const color = riskColor(r.level);
+  return L.divIcon({
+    className:'',
+    html:`<div style="
+      width:14px;height:14px;border-radius:50%;background:${color};
+      border:2px solid #0a0e1a;box-shadow:0 0 8px ${color};
+      ${v.id===selectedId?'outline:2px solid #fff;':''}
+    "></div>`,
+    iconSize:[14,14], iconAnchor:[7,7]
+  });
+}
+function popupHtml(v){
+  const r = computeRisk(v);
+  return `<b>${v.name}</b><br>${r.level} · ${r.score}%<br>Floodplain exposure: ${v.terrain}`;
+}
+function updateMapMarkers(){
+  if (!map) return;
+  currentLocalities().forEach(v=>{
+    if (!markers[v.id]) return;
+    const icon = markerIcon(v);
+    const r = computeRisk(v);
+    const color = riskColor(r.level);
+    markers[v.id].setIcon(icon);
+    markers[v.id].setPopupContent(popupHtml(v));
+    if (boundaries[v.id]) boundaries[v.id].setStyle({ color, fillColor: color });
+  });
+}
+
+/* ---------------- live weather API connector ---------------- */
+function updateApiStatus(live=false, message=''){
+  const el=document.getElementById('apiStatus'); if(!el) return;
+  el.className='api-status '+(live?'live':'demo');
+  el.textContent=live?'API: LIVE':'API: DEMO';
+  if(message) el.title=message;
+}
+function openApiModal(){
+  const m=document.getElementById('apiModal'); if(!m) return;
+  document.getElementById('openWeatherKey').value=API_CONFIG.openWeatherKey;
+  m.classList.add('open');
+}
+async function fetchLiveWeather(){
+  if(!API_CONFIG.openWeatherKey){ updateApiStatus(false,'Add an OpenWeatherMap key to enable live weather.'); return; }
+  const r=currentRegion(), v=currentLocalities()[0];
+  try{
+    const url=`${API_CONFIG.openWeatherBase}/weather?lat=${v.lat}&lon=${v.lng}&appid=${encodeURIComponent(API_CONFIG.openWeatherKey)}&units=metric`;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error(`Weather API ${res.status}`);
+    const data=await res.json();
+    const rainMm = data.rain && (data.rain['1h'] || data.rain['3h']) ? Number(data.rain['1h'] || data.rain['3h']) : null;
+    if(rainMm!==null) v.rainfall=Math.max(v.rainfall, rainMm*24);
+    if(Number.isFinite(data.main?.humidity)) v.soil=Math.max(0,Math.min(100,Math.round(data.main.humidity*.9)));
+    v.liveWeather={temp:data.main?.temp,humidity:data.main?.humidity,description:data.weather?.[0]?.description||'live conditions'};
+    updateApiStatus(true,`Live OpenWeather data for ${v.name}`);
+    renderActiveView();
+  }catch(err){ updateApiStatus(false,err.message); }
+}
+function wireApi(){
+  document.getElementById('btnApiKeys')?.addEventListener('click',openApiModal);
+  document.getElementById('apiCancel')?.addEventListener('click',()=>document.getElementById('apiModal').classList.remove('open'));
+  document.getElementById('apiSave')?.addEventListener('click',()=>{
+    const key=document.getElementById('openWeatherKey').value.trim();
+    API_CONFIG.openWeatherKey=key;
+    if(key) localStorage.setItem('flashfusion_openweather_key',key); else localStorage.removeItem('flashfusion_openweather_key');
+    document.getElementById('apiModal').classList.remove('open');
+    fetchLiveWeather();
+  });
+}
+
+/* ---------------- flash-flood simulation ---------------- */
+function runSimulation(){
+  if (simRunning) return;
+  simRunning = true;
+  clearInterval(liveTimer);
+  const r = currentRegion();
+  const btn = document.getElementById('btnSimulate');
+  btn.classList.add('pulse'); btn.textContent = '⏳ Simulating...';
+  const flagshipExists = r.localities.some(x=>x.id===r.flagship);
+  const flagshipId = flagshipExists ? r.flagship : r.localities[0].id;
+  const target = r.localities.find(x=>x.id===flagshipId);
+  setSelectedId(flagshipId);
+
+  let stage = 0;
+  function nextStage(){
+    if (stage >= r.simStages.length){
+      simRunning = false;
+      btn.classList.remove('pulse'); btn.textContent = `▶️  ${r.simLabel}`;
+      startLiveFeed();
+      return;
+    }
+    const prevLevel = computeRisk(target).level;
+    Object.assign(target, r.simStages[stage]);
+    tickCount++;
+    const rr = computeRisk(target);
+    target.trend.push({t:tickCount, score:rr.score});
+    target.sensorHistory.rainfall.push(target.rainfall);
+    target.sensorHistory.soil.push(target.soil);
+    target.sensorHistory.water.push(target.water);
+    if (rr.level !== prevLevel) pushAlert(target, rr.level, prevLevel);
+    renderActiveView();
+    stage++;
+    setTimeout(nextStage, 1600);
+  }
+  nextStage();
+}
+
+function resetSimulation(){
+  clearInterval(liveTimer);
+  const list = currentLocalities();
+  list.forEach(v=>{
+    v.trend = [];
+    v.sensorHistory = {rainfall:[],soil:[],water:[]};
+    v.rainfall = v.baseline.rainfall;
+    v.soil = v.baseline.soil;
+    v.water = v.baseline.water;
+  });
+  seedList(list);
+  simRunning = false;
+  const btn = document.getElementById('btnSimulate');
+  btn.classList.remove('pulse'); btn.textContent = `▶️  ${currentRegion().simLabel}`;
+  renderActiveView();
+  startLiveFeed();
+}
+
+function startLiveFeed(){
+  clearInterval(liveTimer);
+  liveTimer = setInterval(tick, 4000);
+}
+
+/* ---------------- clock ---------------- */
+function updateClock(){
+  const d = new Date();
+  document.getElementById('clockChip').textContent = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+
+/* ---------------- init ---------------- */
+document.getElementById('btnSimulate').addEventListener('click', runSimulation);
+document.getElementById('btnReset').addEventListener('click', resetSimulation);
+
+seedAll();
+initMapsBase();
+fillStateSelect();
+fillDistrictSelect();
+document.getElementById('districtSelect').addEventListener('change', function(){ setSelectedRegion(this.value); });
+rebuildLocalitySelects();
+bindLocalitySelectChange(document.getElementById('globalVillageSelect'));
+bindLocalitySelectChange(document.getElementById('sensorVillageSelect'));
+bindLocalitySelectChange(document.getElementById('predVillageSelect'));
+loadRegionOnMaps();
+wireApi();
+updateClock();
+fetchLiveWeather();
+renderActiveView();
+startLiveFeed();
+
+</script>
+
+<div class="api-modal" id="apiModal">
+  <div class="api-box">
+    <h3>🔑 Live Data API Connection</h3>
+    <p>Keys are stored only in this browser's localStorage and are not hard-coded into the GitHub file. The app remains usable in DEMO mode when no key is supplied.</p>
+    <div class="api-field"><label>OpenWeatherMap API key</label><input id="openWeatherKey" type="password" placeholder="Paste your OpenWeatherMap key"></div>
+    <div class="api-actions"><button class="btn" id="apiCancel" type="button">Cancel</button><button class="btn" id="apiSave" type="button">Save & Connect</button></div>
+    <div class="api-note">Connected weather values are displayed as external observations; the prototype's flood-risk score remains a demo/model layer unless you connect validated hydrology/IoT feeds.</div>
+  </div>
+</div>
+</body>
+</html>
